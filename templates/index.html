@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamWedz with Hera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #f9f5f6;
+        }
+
+        .chat-circle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #ff6b81;
+            color: white;
+            text-align: center;
+            line-height: 60px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .chat-circle:hover {
+            transform: scale(1.1);
+        }
+
+        .chat-box {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 350px;
+            height: 450px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(20px);
+            z-index: 999;
+        }
+
+        .chat-box.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .chat-header {
+            background-color: #ff6b81;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .close-chat {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .bot-message {
+            background-color: #f0f0f0;
+            color: #333;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #ff6b81;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .chat-input {
+            padding: 15px;
+            display: flex;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-input button {
+            background-color: #ff6b81;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-left: 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chat-input button:hover {
+            background-color: #ff5268;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            background-color: #f0f0f0;
+            color: #333;
+            border-radius: 15px;
+            border-bottom-left-radius: 5px;
+            margin-bottom: 15px;
+            max-width: 80%;
+            margin-right: auto;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background-color: #888;
+            border-radius: 50%;
+            margin-right: 3px;
+            animation: typing 1s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-circle">
+        <i>💬</i>
+    </div>
+
+    <div class="chat-box">
+        <div class="chat-header">
+            Hera - Your Wedding Assistant
+            <span class="close-chat">✕</span>
+        </div>
+        <div class="chat-messages">
+            <div class="message bot-message">
+                Hi there! I'm Hera, your personal wedding planning assistant! How can I help you plan your dream wedding today?
+            </div>
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" placeholder="Type your message...">
+            <button>Send</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatCircle = document.querySelector('.chat-circle');
+            const chatBox = document.querySelector('.chat-box');
+            const closeChat = document.querySelector('.close-chat');
+            const chatInput = document.querySelector('.chat-input input');
+            const sendButton = document.querySelector('.chat-input button');
+            const chatMessages = document.querySelector('.chat-messages');
+            const typingIndicator = document.querySelector('.typing-indicator');
+
+            // Generate a unique session ID
+            const sessionId = 'session_' + Date.now();
+
+            // Toggle chat box visibility
+            chatCircle.addEventListener('click', function() {
+                chatBox.classList.add('active');
+                chatCircle.style.display = 'none';
+                chatInput.focus();
+            });
+
+            closeChat.addEventListener('click', function() {
+                chatBox.classList.remove('active');
+                chatCircle.style.display = 'block';
+            });
+
+            // Send message function
+            async function sendMessage() {
+                const message = chatInput.value.trim();
+                if (message === '') return;
+
+                // Add user message to chat
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.classList.add('message', 'user-message');
+                userMessageDiv.textContent = message;
+                chatMessages.appendChild(userMessageDiv);
+
+                // Clear input
+                chatInput.value = '';
+
+                // Scroll to the bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Show typing indicator
+                typingIndicator.style.display = 'block';
+
+                try {
+                    // Send message to backend
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            session_id: sessionId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    // Hide typing indicator
+                    typingIndicator.style.display = 'none';
+
+                    // Add bot response
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.classList.add('message', 'bot-message');
+                    botMessageDiv.textContent = data.response;
+                    chatMessages.appendChild(botMessageDiv);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Hide typing indicator
+                    typingIndicator.style.display = 'none';
+
+                    // Add error message
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.classList.add('message', 'bot-message');
+                    botMessageDiv.textContent = "Sorry, I'm having trouble connecting. Please try again later.";
+                    chatMessages.appendChild(botMessageDiv);
+                }
+
+                // Scroll to the bottom again
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Send message on button click
+            sendButton.addEventListener('click', sendMessage);
+
+            // Send message on Enter key
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
